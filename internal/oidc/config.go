@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 
 	oauthelia2 "authelia.com/provider/oauth2"
+	"authelia.com/provider/oauth2/handler/idjag"
 	"authelia.com/provider/oauth2/handler/oauth2"
 	"authelia.com/provider/oauth2/handler/oidckb"
 	"authelia.com/provider/oauth2/handler/openid"
@@ -157,6 +158,7 @@ type Config struct {
 	Handlers  HandlersConfig
 	Lifespans LifespansConfig
 	RFC8693   RFC8693Config
+	IDJAG     *IDJAGConfig
 
 	ProofKeyCodeExchange ProofKeyCodeExchangeConfig
 	GrantTypeJWTBearer   GrantTypeJWTBearerConfig
@@ -386,6 +388,27 @@ func (c *Config) LoadHandlers(store *Store) {
 		}
 	}
 
+	var (
+		handlerIDJAGIssue  any
+		handlerIDJAGRedeem any
+	)
+
+	if _, ok := c.RFC8693.TokenTypes[TokenTypeIDJAG]; ok {
+		handlerIDJAGIssue = &idjag.IssueHandler{Config: c, Strategy: c.Strategy.JWT, Storage: store}
+	}
+
+	if c.IDJAG != nil && len(c.IDJAG.TrustedIssuers) != 0 {
+		handlerIDJAGRedeem = &idjag.RedeemHandler{
+			Config:  c,
+			Storage: store,
+			HandleHelper: &oauth2.HandleHelper{
+				AccessTokenStrategy: c.Strategy.Core,
+				AccessTokenStorage:  store,
+				Config:              c,
+			},
+		}
+	}
+
 	handlers := []any{
 		handlerDPoPAuthorize,
 		handlerDPoPDeviceAuthorize,
@@ -563,6 +586,7 @@ func (c *Config) LoadHandlers(store *Store) {
 			ValidationStrategy: &IDTokenSubjectValidationStrategy{TokenValidationStrategy: &openid.DefaultIDTokenValidationStrategy{Strategy: c.Strategy.JWT}},
 			Storage:            store,
 		},
+		handlerIDJAGIssue,
 		handlerTxnToken,
 		&rfc8693.ActorTokenValidationHandler{},
 
@@ -575,6 +599,7 @@ func (c *Config) LoadHandlers(store *Store) {
 
 		handlerDPoPToken,
 		handlerKeyBindingToken,
+		handlerIDJAGRedeem,
 	}
 
 	x := HandlersConfig{
@@ -1160,6 +1185,36 @@ func (c *Config) GetIntrospectionEndpointClientAuthStrategy(ctx context.Context)
 	}
 
 	return c.Strategy.IntrospectionEndpointClientAuth
+}
+
+// GetIDJAGLifespan returns the lifespan of an issued Identity Assertion JWT Authorization Grant.
+func (c *Config) GetIDJAGLifespan(ctx context.Context) (lifespan time.Duration) {
+	if c.IDJAG == nil {
+		return idjagLifespanDefault
+	}
+
+	return c.IDJAG.Lifespan
+}
+
+// GetIDJAGSingleUse returns true when an Identity Assertion JWT Authorization Grant may only be redeemed once.
+func (c *Config) GetIDJAGSingleUse(ctx context.Context) (single bool) {
+	return c.IDJAG == nil || c.IDJAG.SingleUse
+}
+
+// GetIDJAGAccessTokenAllowance returns how long an access token issued for an Identity Assertion JWT Authorization
+// Grant may outlive the grant.
+func (c *Config) GetIDJAGAccessTokenAllowance(ctx context.Context) (allowance time.Duration) {
+	if c.IDJAG == nil {
+		return 0
+	}
+
+	return c.IDJAG.AccessTokenAllowance
+}
+
+// GetIDJAGResourceOptional returns true when a client may omit the 'resource' parameter when requesting an Identity
+// Assertion JWT Authorization Grant even though its relationship lists resources.
+func (c *Config) GetIDJAGResourceOptional(ctx context.Context) (optional bool) {
+	return c.IDJAG != nil && c.IDJAG.ResourceOptional
 }
 
 // GetDPoPEnabled returns the DPoP enabled flag.
