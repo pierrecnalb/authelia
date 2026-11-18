@@ -80,12 +80,16 @@ func TestNewRFC8693TokenTypes(t *testing.T) {
 
 		require.True(t, ok)
 		assert.Equal(t, oidc.TokenTypeTxnToken, tokenType.Name)
-		assert.Equal(t, "example.com", tokenType.TrustDomain)
-		assert.Equal(t, "https://txn.example.com", tokenType.Issuer)
-		assert.Equal(t, time.Minute*3, tokenType.Expiry)
-		assert.Equal(t, "RS256", tokenType.SigningAlg)
-		assert.Nil(t, tokenType.TranscribeClaims)
-		assert.Nil(t, tokenType.Replacement)
+		require.Len(t, tokenType.Domains, 1)
+
+		domain := tokenType.Domains["example.com"]
+
+		require.NotNil(t, domain)
+		assert.Equal(t, "https://txn.example.com", domain.Issuer)
+		assert.Equal(t, time.Minute*3, domain.Expiry)
+		assert.Equal(t, "RS256", domain.SigningAlg)
+		assert.Nil(t, domain.TranscribeClaims)
+		assert.Nil(t, domain.Replacement)
 	})
 
 	t.Run("ShouldBuildTxnTokenWithCopyAndReplacement", func(t *testing.T) {
@@ -101,10 +105,14 @@ func TestNewRFC8693TokenTypes(t *testing.T) {
 		tokenType, ok := types[oidc.TokenTypeTxnToken].(*rfc8693.TxnTokenType)
 
 		require.True(t, ok)
-		assert.NotNil(t, tokenType.TranscribeClaims)
-		require.NotNil(t, tokenType.Replacement)
-		assert.NotNil(t, tokenType.Replacement.KeyFunc)
-		assert.Equal(t, 4, tokenType.Replacement.MaxChainLength)
+
+		domain := tokenType.Domains["example.com"]
+
+		require.NotNil(t, domain)
+		assert.NotNil(t, domain.TranscribeClaims)
+		require.NotNil(t, domain.Replacement)
+		assert.NotNil(t, domain.Replacement.KeyFunc)
+		assert.Equal(t, 4, domain.Replacement.MaxChainLength)
 	})
 }
 

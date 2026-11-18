@@ -68,24 +68,25 @@ func defaultRequestedTokenType(config *schema.IdentityProvidersOpenIDConnectToke
 }
 
 func newTxnTokenType(config *schema.IdentityProvidersOpenIDConnectTransactionTokens, issuer *Issuer) (tokenType *rfc8693.TxnTokenType) {
-	tokenType = &rfc8693.TxnTokenType{
-		Name:        TokenTypeTxnToken,
-		TrustDomain: config.TrustDomain,
-		Issuer:      config.Issuer,
-		Expiry:      config.Lifespan,
-		SigningAlg:  config.SigningAlgorithm,
+	domain := &rfc8693.TxnTokenTrustDomain{
+		Issuer:     config.Issuer,
+		Expiry:     config.Lifespan,
+		SigningAlg: config.SigningAlgorithm,
 	}
 
 	if config.CopyRequestParameters {
-		tokenType.TranscribeClaims = rfc8693.CopyTxnTokenRequestParameters
+		domain.TranscribeClaims = rfc8693.CopyTxnTokenRequestParameters
 	}
 
 	if config.Replacement.Enabled {
-		tokenType.Replacement = &rfc8693.TxnTokenReplacement{
+		domain.Replacement = &rfc8693.TxnTokenReplacement{
 			KeyFunc:        NewIssuerKeyFunc(issuer),
 			MaxChainLength: config.Replacement.MaxChainLength,
 		}
 	}
 
-	return tokenType
+	return &rfc8693.TxnTokenType{
+		Name:    TokenTypeTxnToken,
+		Domains: map[string]*rfc8693.TxnTokenTrustDomain{config.TrustDomain: domain},
+	}
 }

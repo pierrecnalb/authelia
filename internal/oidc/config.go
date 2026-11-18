@@ -9,6 +9,7 @@ import (
 	"crypto/sha512"
 	"hash"
 	"html/template"
+	"net"
 	"net/url"
 	"strings"
 	"time"
@@ -43,8 +44,9 @@ func NewConfig(config *schema.IdentityProvidersOpenIDConnect, issuer *Issuer, te
 		MinParameterEntropy:        config.MinimumParameterEntropy,
 		Lifespans: LifespansConfig{
 			IdentityProvidersOpenIDConnectLifespanToken: config.Lifespans.IdentityProvidersOpenIDConnectLifespanToken,
-			RFC8628Code:         config.Lifespans.DeviceCode,
-			RefreshTokenMaximum: config.Lifespans.RefreshTokenMaximum,
+			RFC8628Code:             config.Lifespans.DeviceCode,
+			RefreshTokenMaximum:     config.Lifespans.RefreshTokenMaximum,
+			RefreshTokenGracePeriod: config.Lifespans.RefreshTokenGracePeriod,
 		},
 		ProofKeyCodeExchange: ProofKeyCodeExchangeConfig{
 			Enforce:                   config.EnforcePKCE == "always",
@@ -206,7 +208,8 @@ type LifespansConfig struct {
 	RFC8628Code    time.Duration
 	RFC8628Polling time.Duration
 
-	RefreshTokenMaximum time.Duration
+	RefreshTokenMaximum     time.Duration
+	RefreshTokenGracePeriod time.Duration
 }
 
 // HashConfig holds specific oauthelia2.Configurator information for hashing.
@@ -821,6 +824,17 @@ func (c *Config) GetRefreshTokenMaximumLifespan(ctx context.Context) (lifespan t
 	return c.Lifespans.RefreshTokenMaximum
 }
 
+// GetRefreshTokenGracePeriod returns the time a rotated refresh token remains redeemable after it is first redeemed. A
+// value of 0 disables the grace period.
+func (c *Config) GetRefreshTokenGracePeriod(ctx context.Context) (grace time.Duration) {
+	return c.Lifespans.RefreshTokenGracePeriod
+}
+
+// GetAccessTokenURIQueryParameterEnabled returns false as access tokens presented in the URI query are not accepted.
+func (c *Config) GetAccessTokenURIQueryParameterEnabled(ctx context.Context) (enabled bool) {
+	return false
+}
+
 // GetDisableRefreshTokenExpirationParameters returns false as the refresh token expiration parameters are always
 // included in token responses, refresh token introspection responses, and the authorization server metadata.
 func (c *Config) GetDisableRefreshTokenExpirationParameters(ctx context.Context) (disable bool) {
@@ -971,6 +985,23 @@ func (c *Config) GetJWKSFetcherStrategy(ctx context.Context) (strategy jwt.JWKSF
 	}
 
 	return c.Strategy.JWKSFetcher
+}
+
+// GetClientJWKSFetcherStrategy returns the strategy used to fetch the 'jwks_uri' of the given client. Clients are only
+// registered by the administrator, so their 'jwks_uri' is trusted and fetched with the JWKS fetcher strategy.
+func (c *Config) GetClientJWKSFetcherStrategy(ctx context.Context, client any) (strategy jwt.JWKSFetcherStrategy) {
+	return c.GetJWKSFetcherStrategy(ctx)
+}
+
+// GetDisableSpecialUseAddressGuard returns true as every location fetched is configured by the administrator rather
+// than supplied by a client or another untrusted party.
+func (c *Config) GetDisableSpecialUseAddressGuard(ctx context.Context) (disable bool) {
+	return true
+}
+
+// GetSpecialUseAddressGuardAllowedNetworks returns nil as the special-use address guard is disabled.
+func (c *Config) GetSpecialUseAddressGuardAllowedNetworks(ctx context.Context) (networks []*net.IPNet) {
+	return nil
 }
 
 // GetClientAuthenticationStrategy returns the client authentication strategy.
@@ -1498,6 +1529,126 @@ func (c *Config) GetContext(ctx context.Context) (octx Context) {
 		return octx
 	}
 
+	return nil
+}
+
+// GetCIBATokenDeliveryModes returns nil as OpenID Connect Client-Initiated Backchannel Authentication is not supported.
+func (c *Config) GetCIBATokenDeliveryModes(ctx context.Context) (modes []string) {
+	return nil
+}
+
+// GetCIBAAuthRequestLifespan returns 0 as OpenID Connect Client-Initiated Backchannel Authentication is not supported.
+func (c *Config) GetCIBAAuthRequestLifespan(ctx context.Context) (lifespan time.Duration) {
+	return 0
+}
+
+// GetCIBARequestedExpiryMinimum returns 0 as OpenID Connect Client-Initiated Backchannel Authentication is not
+// supported.
+func (c *Config) GetCIBARequestedExpiryMinimum(ctx context.Context) (minimum time.Duration) {
+	return 0
+}
+
+// GetCIBARequestedExpiryMaximum returns 0 as OpenID Connect Client-Initiated Backchannel Authentication is not
+// supported.
+func (c *Config) GetCIBARequestedExpiryMaximum(ctx context.Context) (maximum time.Duration) {
+	return 0
+}
+
+// GetCIBAPollingInterval returns 0 as OpenID Connect Client-Initiated Backchannel Authentication is not supported.
+func (c *Config) GetCIBAPollingInterval(ctx context.Context) (interval time.Duration) {
+	return 0
+}
+
+// GetCIBALongPollingTimeout returns 0 as OpenID Connect Client-Initiated Backchannel Authentication is not supported.
+func (c *Config) GetCIBALongPollingTimeout(ctx context.Context) (timeout time.Duration) {
+	return 0
+}
+
+// GetCIBASlowDownLimit returns 0 as OpenID Connect Client-Initiated Backchannel Authentication is not supported.
+func (c *Config) GetCIBASlowDownLimit(ctx context.Context) (limit int) {
+	return 0
+}
+
+// GetCIBAUserCodeSupported returns false as OpenID Connect Client-Initiated Backchannel Authentication is not
+// supported.
+func (c *Config) GetCIBAUserCodeSupported(ctx context.Context) (supported bool) {
+	return false
+}
+
+// GetCIBARequestSigningAlgValues returns nil as OpenID Connect Client-Initiated Backchannel Authentication is not
+// supported.
+func (c *Config) GetCIBARequestSigningAlgValues(ctx context.Context) (algs []string) {
+	return nil
+}
+
+// GetCIBARequireOpenIDScope returns true as OpenID Connect Client-Initiated Backchannel Authentication is not
+// supported.
+func (c *Config) GetCIBARequireOpenIDScope(ctx context.Context) (require bool) {
+	return true
+}
+
+// GetCIBAIDTokenHintMaximumAge returns 0 as OpenID Connect Client-Initiated Backchannel Authentication is not
+// supported.
+func (c *Config) GetCIBAIDTokenHintMaximumAge(ctx context.Context) (age time.Duration) {
+	return 0
+}
+
+// GetCIBARequireBindingMessage returns false as OpenID Connect Client-Initiated Backchannel Authentication is not
+// supported.
+func (c *Config) GetCIBARequireBindingMessage(ctx context.Context) (require bool) {
+	return false
+}
+
+// GetCIBAMaximumBindingMessageLength returns 0 as OpenID Connect Client-Initiated Backchannel Authentication is not
+// supported.
+func (c *Config) GetCIBAMaximumBindingMessageLength(ctx context.Context) (length int) {
+	return 0
+}
+
+// GetCIBARequireRequestContext returns false as OpenID Connect Client-Initiated Backchannel Authentication is not
+// supported.
+func (c *Config) GetCIBARequireRequestContext(ctx context.Context) (require bool) {
+	return false
+}
+
+// GetCIBASignedRequestMaximumLifetime returns 0 as OpenID Connect Client-Initiated Backchannel Authentication is not
+// supported.
+func (c *Config) GetCIBASignedRequestMaximumLifetime(ctx context.Context) (lifetime time.Duration) {
+	return 0
+}
+
+// GetCIBARequireSingleAudienceAssertion returns true as OpenID Connect Client-Initiated Backchannel Authentication is
+// not supported.
+func (c *Config) GetCIBARequireSingleAudienceAssertion(ctx context.Context) (require bool) {
+	return true
+}
+
+// GetCIBALoginHintTokenTypes returns nil as OpenID Connect Client-Initiated Backchannel Authentication is not
+// supported.
+func (c *Config) GetCIBALoginHintTokenTypes(ctx context.Context) (types []string) {
+	return nil
+}
+
+// GetBackChannelNotifier returns nil as OpenID Connect Client-Initiated Backchannel Authentication is not supported.
+func (c *Config) GetBackChannelNotifier(ctx context.Context) (notifier oauthelia2.BackChannelNotifier) {
+	return nil
+}
+
+// GetBackChannelAuthenticationEndpointHandlers returns nil as OpenID Connect Client-Initiated Backchannel
+// Authentication is not supported.
+func (c *Config) GetBackChannelAuthenticationEndpointHandlers(ctx context.Context) (handlers oauthelia2.BackChannelAuthenticationEndpointHandlers) {
+	return nil
+}
+
+// GetBackChannelAuthenticationEndpointBindingHandlers returns nil as OpenID Connect Client-Initiated Backchannel
+// Authentication is not supported.
+func (c *Config) GetBackChannelAuthenticationEndpointBindingHandlers(ctx context.Context) (handlers oauthelia2.BackChannelAuthenticationEndpointBindingHandlers) {
+	return nil
+}
+
+// GetBackChannelAuthenticationDecisionHandlers returns nil as OpenID Connect Client-Initiated Backchannel
+// Authentication is not supported.
+func (c *Config) GetBackChannelAuthenticationDecisionHandlers(ctx context.Context) (handlers oauthelia2.BackChannelAuthenticationDecisionHandlers) {
 	return nil
 }
 

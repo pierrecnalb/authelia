@@ -412,6 +412,7 @@ var (
 	_ oauthelia2.IntrospectionClient                                      = (*RegisteredClient)(nil)
 	_ oauthelia2.ApplicationTypeClient                                    = (*RegisteredClient)(nil)
 	_ oauthelia2.RefreshTokenMaximumLifespanClient                        = (*RegisteredClient)(nil)
+	_ oauthelia2.RefreshTokenGracePeriodClient                            = (*RegisteredClient)(nil)
 	_ oauthelia2.RefreshTokenRotationClient                               = (*RegisteredClient)(nil)
 	_ rfc8693.Client                                                      = (*RegisteredClient)(nil)
 	_ rfc8693.ActorTokenExchangeClient                                    = (*RegisteredClient)(nil)

@@ -123,6 +123,39 @@ func TestConfig_Durations(t *testing.T) {
 	config.Lifespans.RefreshTokenMaximum = time.Hour * 24 * 90
 	assert.Equal(t, time.Hour*24*90, config.GetRefreshTokenMaximumLifespan(ctx))
 
+	assert.Equal(t, time.Duration(0), config.GetRefreshTokenGracePeriod(ctx))
+
+	config.Lifespans.RefreshTokenGracePeriod = time.Second * 10
+	assert.Equal(t, time.Second*10, config.GetRefreshTokenGracePeriod(ctx))
+
+	assert.False(t, config.GetAccessTokenURIQueryParameterEnabled(ctx))
+
+	assert.True(t, config.GetDisableSpecialUseAddressGuard(ctx))
+	assert.Nil(t, config.GetSpecialUseAddressGuardAllowedNetworks(ctx))
+	assert.Equal(t, config.GetJWKSFetcherStrategy(ctx), config.GetClientJWKSFetcherStrategy(ctx, nil))
+
+	assert.Nil(t, config.GetCIBATokenDeliveryModes(ctx))
+	assert.Equal(t, time.Duration(0), config.GetCIBAAuthRequestLifespan(ctx))
+	assert.Equal(t, time.Duration(0), config.GetCIBARequestedExpiryMinimum(ctx))
+	assert.Equal(t, time.Duration(0), config.GetCIBARequestedExpiryMaximum(ctx))
+	assert.Equal(t, time.Duration(0), config.GetCIBAPollingInterval(ctx))
+	assert.Equal(t, time.Duration(0), config.GetCIBALongPollingTimeout(ctx))
+	assert.Equal(t, 0, config.GetCIBASlowDownLimit(ctx))
+	assert.False(t, config.GetCIBAUserCodeSupported(ctx))
+	assert.Nil(t, config.GetCIBARequestSigningAlgValues(ctx))
+	assert.True(t, config.GetCIBARequireOpenIDScope(ctx))
+	assert.Equal(t, time.Duration(0), config.GetCIBAIDTokenHintMaximumAge(ctx))
+	assert.False(t, config.GetCIBARequireBindingMessage(ctx))
+	assert.Equal(t, 0, config.GetCIBAMaximumBindingMessageLength(ctx))
+	assert.False(t, config.GetCIBARequireRequestContext(ctx))
+	assert.Equal(t, time.Duration(0), config.GetCIBASignedRequestMaximumLifetime(ctx))
+	assert.True(t, config.GetCIBARequireSingleAudienceAssertion(ctx))
+	assert.Nil(t, config.GetCIBALoginHintTokenTypes(ctx))
+	assert.Nil(t, config.GetBackChannelNotifier(ctx))
+	assert.Nil(t, config.GetBackChannelAuthenticationEndpointHandlers(ctx))
+	assert.Nil(t, config.GetBackChannelAuthenticationEndpointBindingHandlers(ctx))
+	assert.Nil(t, config.GetBackChannelAuthenticationDecisionHandlers(ctx))
+
 	assert.Equal(t, time.Duration(0), config.Lifespans.AuthorizeCode)
 	assert.Equal(t, time.Minute*15, config.GetAuthorizeCodeLifespan(ctx))
 	assert.Equal(t, time.Minute*15, config.Lifespans.AuthorizeCode)
